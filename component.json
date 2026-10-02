@@ -1,0 +1,13 @@
+{
+  "name": "plugin.scaler",
+  "slug": "scaler",
+  "source": "scaler",
+  "world": "scaler-plugin",
+  "binding": null,
+  "members": [
+    "scaler"
+  ],
+  "artifacts": [
+    "plugin.scaler.wasm"
+  ]
+}
