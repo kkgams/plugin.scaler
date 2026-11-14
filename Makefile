@@ -16,6 +16,8 @@ export TMPDIR := $(abspath build.nosync/tmp)
 export PYTHONPYCACHEPREFIX := $(abspath build.nosync/pycache)
 SOURCE := plugins/scaler.comp
 WIT := $(shell find $(SOURCE)/wit -type f)
+WIT_DIRS := $(shell find $(SOURCE)/wit -type d)
+LEGAL_DIRS := $(shell find LICENSES third_party -type d)
 LEGAL := LICENSE NOTICE LICENSING.md $(sort $(shell find LICENSES third_party -type f \( -iname '*license*' -o -name 'W3C-Community-CLA.html' -o -path 'LICENSES/*' \)))
 ARTIFACT := build.nosync/plugin.scaler.wasm
 .PHONY: test all build package check clean open docs serve-docs validate-docs
@@ -28,17 +30,19 @@ build.nosync/tmp:
 MODULE_INPUTS := $(shell find $(SOURCE) -maxdepth 1 -type f \( -name '*.go' -o -name 'go.mod' -o -name 'go.sum' \))
 MODULE_FILES := $(patsubst $(SOURCE)/%,build.nosync/scaler/%,$(MODULE_INPUTS))
 SDK := $(shell find sdk -type f)
+SDK_DIRS := $(shell find sdk -type d)
 export GOCACHE := $(abspath build.nosync/go-cache)
 export GOMODCACHE := $(abspath build.nosync/go-modules)
 export TINYGOCACHE := $(abspath build.nosync/tinygo-cache)
 export GOTOOLCHAIN := local
 export GOFLAGS := -modcacherw
 
-build.nosync/scaler/%: $(SOURCE)/% | build.nosync/tmp
-	mkdir -p "$(@D)"
-	cp "$<" "$@"
+$(MODULE_FILES) &: $(MODULE_INPUTS) $(SOURCE) Makefile | build.nosync/tmp
+	mkdir -p build.nosync/scaler
+	rm -f build.nosync/scaler/*.go build.nosync/scaler/go.mod build.nosync/scaler/go.sum
+	cp $(MODULE_INPUTS) build.nosync/scaler/
 
-build.nosync/package.wasm: $(WIT) Makefile flake.nix flake.lock | build.nosync/tmp
+build.nosync/package.wasm: $(WIT) $(WIT_DIRS) Makefile flake.nix flake.lock | build.nosync/tmp
 	wasm-tools component wit $(SOURCE)/wit --wasm -o "$@"
 
 BINDINGS := build.nosync/scaler/internal/gams/scaler/scaler-plugin/scaler-plugin.wit.go \
@@ -137,7 +141,7 @@ BINDINGS := build.nosync/scaler/internal/gams/scaler/scaler-plugin/scaler-plugin
 $(BINDINGS) &: build.nosync/package.wasm $(MODULE_FILES) Makefile
 	cd build.nosync/scaler && go tool wit-bindgen-go generate --world scaler-plugin --out internal ../package.wasm
 
-$(ARTIFACT): $(MODULE_FILES) $(BINDINGS) $(SDK) $(LEGAL) scripts/wasm-notices.py Makefile flake.nix flake.lock
+$(ARTIFACT): $(MODULE_FILES) $(BINDINGS) $(SDK) $(SDK_DIRS) $(SOURCE) $(LEGAL) $(LEGAL_DIRS) scripts/wasm-notices.py Makefile flake.nix flake.lock
 	cd build.nosync/scaler && tinygo build -target=wasip2 -opt=2 -no-debug -o ../plugin.scaler.wasm --wit-package ../package.wasm --wit-world scaler-plugin main.go
 	wasm-tools strip -a "$@" -o "$@.stripped"
 	mv "$@.stripped" "$@"
@@ -153,7 +157,7 @@ check: | build.nosync/tmp
 
 package: build.nosync/SHA256SUMS $(ARTIFACT) build.nosync/LICENSES.zip
 
-build.nosync/LICENSES.zip: $(LEGAL) Makefile | build.nosync/tmp
+build.nosync/LICENSES.zip: $(LEGAL) $(LEGAL_DIRS) Makefile | build.nosync/tmp
 	rm -f "$@"
 	zip -q -X "$@" $(LEGAL)
 
