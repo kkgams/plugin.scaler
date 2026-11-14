@@ -1,56 +1,35 @@
 ---
-title: Development
+title: plugin.scaler
+description: Scale tile maps.
 status: reference
 ---
 
-# plugin.scaler development
+# plugin.scaler
 
-## Build and test
+A [GAMS](https://github.com/kkgams/gams) WASM plugin for scaling tile maps.
 
-Use the repository's pinned Nix environment from its root:
+| Unit | Source / artifact | Original work |
+| --- | --- | --- |
+| Tilemap scaler | `plugins/scaler.comp/main.go` / `plugin.scaler.wasm` | GAMS |
 
-```sh
-nix develop
-make build
-make test
-```
+## API
 
-Local output is under `dist/`. See the repository README for the exported WIT
-contract, test coverage and existing release requirements. Runtime, packaging,
-licensing evidence and version-tag publication policies are unchanged.
+`plugins/scaler.comp/wit/package.wit` defines `gams:scaler/scaler@1.0.0`: `scale(src, config)` with a scale factor and optional cardinal door sizes, returning a tile map or error. Maps contain layers with widths, flat tile arrays and string-pair properties. The `scaler-plugin` world uses Host-provided WASI imports.
 
-## Open the local Project
+## Development
 
-On macOS Apple Silicon, from the same development shell:
+Use `nix develop` (or direnv) for pinned Go 1.25, TinyGo, wasm-tools and documentation tools. No sibling checkout is required.
 
-```sh
-make open
-```
+| Command | Purpose |
+| --- | --- |
+| `make build` | Compile and validate the component with embedded notices. |
+| `make package` | Prepare `build.nosync/plugin.scaler.wasm`, `LICENSES.zip` and `SHA256SUMS` incrementally. |
+| `make test` | Run the existing native plugin and SDK Go tests. |
+| `make check` | Check Python tooling syntax; native tests are separate from WASM runtime coverage. |
+| `make open` | Build and open this local Project in the released macOS Apple Silicon Host. |
+| `make docs` | Build the wiki to `build.nosync/site`. |
+| `make serve-docs` | Preview the wiki; `DOCS_PORT` defaults to 8080. |
+| `make validate-docs` | Validate wiki content. |
+| `make clean` | Remove `build.nosync` and identified Host/Unit downloads; refuse tracked files, symlinks and unidentified supplied tools/caches. |
 
-This builds the local component artifacts, downloads the released Host into
-ignored `tools/gams.app` if absent, and explicitly selects this repository's
-`gams.json` using `GAMS_APP_CWD`. No neighboring checkout is needed. Downloaded
-Host notices remain in `tools/gams-release-notices`; an existing app is never
-updated implicitly. No Gatekeeper bypass is performed.
-
-The released file browser is the initial View; the local component is loaded
-for Host integration. This Project does not provide a custom UI for this plugin
-or claim to exercise its API. Use the repository tests for the documented checks.
-
-The Project pins published filesystem/layout components, shell UI Services,
-theme and Views. First launch requires network access for those dependencies;
-Host-installed Units stay in ignored `gams_modules/`.
-
-## Documentation
-
-```sh
-make serve-docs DOCS_PORT=8080
-make validate-docs
-make docs
-```
-
-These targets use pinned `justgook/wiki` v1.4.0. `DOCS_PORT` is independent of
-application ports. `make docs` writes the portable site to `build/site/`;
-`make build-docs` remains an alias. Downloads and generated output stay under
-ignored `build/`. Every push to `release` builds through `make docs` and deploys
-GitHub Pages independently of version-tag releases.
+The local Project browses files with pinned published Units; it is not a tilemap editor or runtime test. Downloads preserve accompanying notices and existing Host tools. Packaging does not verify native Host/API behavior.
